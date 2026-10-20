@@ -50,10 +50,13 @@ training:
   check_val_every_n_epoch: null
   val_check_interval: 500
   metric_log_interval: 50
+  log_every_n_steps: 50
   plot_validation: true
 ```
 
 This validates every 500 training batches across epochs and averages training metrics over 50 batches. These intervals count training batches, including gradient accumulation batches. At every validation, W&B receives magnetic/velocity maps, ME parameter maps, observed versus synthesized Stokes maps and representative I/Q/U/V profiles. Limb/artifact correction maps appear when those modules are enabled. Images use `trainer/global_step` as their training-step axis. `plot_validation` defaults to `true`; set it to `false` to retain only scalar metrics. Rendering is skipped when W&B logging is disabled.
+
+The progress bar displays the averaged total objective as `train.loss` whenever the metric window is flushed, including a short final window at epoch end. `log_every_n_steps` separately controls Lightning's logger cadence in optimizer steps. Keep it aligned with `metric_log_interval` when `accumulate_grad_batches: 1`; for example, use `10` for both to refresh the progress-bar loss and W&B curves more frequently. `training.enable_progress_bar: false` hides the bar without disabling metric logging.
 
 For validation at each epoch's end, use `check_val_every_n_epoch: 1` and `val_check_interval: 1.0`. Keep the decimal point: integer `1` means every batch.
 

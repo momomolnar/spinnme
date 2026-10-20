@@ -26,7 +26,7 @@ Each training batch samples observed profiles, evaluates the shared magnetic and
 
 ## Monitor the fit
 
-The console reports preparation, the selected device and training progress. Enable [Weights & Biases](#weights--biases) to inspect training and validation curves. Important metrics include `train.stokes_loss`, the I/Q/U/V component losses, and `valid.objective`.
+The console reports preparation, the selected device and training progress. The progress bar shows `train.loss`, the total training objective averaged over `training.metric_log_interval` batches (50 by default), including any enabled physics penalties. It first appears after that interval, or at the end of a shorter epoch, and works with logging disabled. Enable [Weights & Biases](#weights--biases) to inspect training and validation curves. Important metrics include `train.loss`, `train.stokes_loss`, the I/Q/U/V component losses, and `valid.objective`.
 
 Validation evaluates the single observation selected by `data.valid_config`. When that observation also appears in training, its loss measures the fit to training data. For an independent check, [exclude it from training](training_options.md#choose-a-validation-observation-or-holdout).
 
@@ -83,6 +83,32 @@ training:
   plot_validation: true
 ```
 
-The W&B project is always `spinnme`. Use a short representative `name`, such as `hmi-90s` or `hinode-sp`. `offline` saves W&B records under the working directory. For a dashboard with curves and images, authenticate with `wandb login` and use `mode: online`. Set `mode: disabled` to turn logging off. Plots are enabled by default and logged every `val_check_interval` training batches (1000 in this example). They include magnetic/velocity and ME parameter maps, integrated I/Q/U/V comparisons, and representative spectral fits; enabled limb/artifact corrections add their own maps. Images carry the current `trainer/global_step`. Set `plot_validation: false` for scalar metrics only. `data.valid_config.resolution` controls the map size and rendering cost. Full maps require `limit_val_batches: 1.0` (the default); partial validation still reports scalar metrics.
+The W&B project is always `spinnme`. Use a short representative `name`, such as `hmi-90s` or `hinode-sp`. `offline` saves W&B records under the working directory. For a dashboard with curves and images, authenticate with `wandb login` and use `mode: online`. Set `mode: disabled` to turn logging off.
+
+From a cloned repository, install the extra into your active environment and authenticate:
+
+```bash
+python -m pip install -e '.[wandb]'
+wandb login
+```
+
+Merge these settings into the existing YAML sections to select your W&B team and update the loss display every 10 training batches:
+
+```yaml
+logging:
+  mode: online
+  project: spinnme
+  entity: your-wandb-team
+  name: hmi-north-20260110
+  group: hmi-poles-20260110
+training:
+  enable_progress_bar: true
+  metric_log_interval: 10
+  log_every_n_steps: 10
+```
+
+Replace `your-wandb-team` with the entity slug from your W&B project URL, or omit `entity` to use your account's default destination. Use separate run names for north and south and the same group to compare them. Authentication belongs in `wandb login`, not in the YAML. The metric window counts training batches; `log_every_n_steps` controls Lightning's logger cadence in optimizer steps. With the default `accumulate_grad_batches: 1`, the example aligns both intervals. Set both intervals to `1` for per-batch values, at the cost of more logging and device synchronization.
+
+Plots are enabled by default and logged every `val_check_interval` training batches (1000 in the earlier example). They include magnetic/velocity and ME parameter maps, integrated I/Q/U/V comparisons, and representative spectral fits; enabled limb/artifact corrections add their own maps. Images carry the current `trainer/global_step`. Set `plot_validation: false` for scalar metrics only. `data.valid_config.resolution` controls the map size and rendering cost. Full maps require `limit_val_batches: 1.0` (the default); partial validation still reports scalar metrics.
 
 For convergence or memory problems, start with a short run and use the [customization recipes](training_options.md) and [troubleshooting guide](troubleshooting.md).

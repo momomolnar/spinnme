@@ -569,8 +569,12 @@ class MESphericalModule(LightningModule):
             metrics['Learning Rate'] = self.optimizers().param_groups[0]['lr']
             metrics['time_shift_scale'] = self.time_shift_scale.detach() * self.seconds_per_dt
             # Already reduced together, including physics metrics and stokes_weights.
-            self.log_dict(metrics, sync_dist=False, on_step=not epoch_end,
-                          on_epoch=epoch_end, batch_size=1)
+            log_options = {'sync_dist': False, 'on_step': not epoch_end,
+                           'on_epoch': epoch_end, 'batch_size': 1}
+            # Display the same window-averaged objective sent to the logger.
+            # Reuse the existing interval rather than logging each batch's loss.
+            self.log('train.loss', metrics.pop('train.loss'), prog_bar=True, **log_options)
+            self.log_dict(metrics, **log_options)
 
     def on_train_epoch_end(self):
         # Preserve a short final window when an epoch/run ends before 50 batches.
